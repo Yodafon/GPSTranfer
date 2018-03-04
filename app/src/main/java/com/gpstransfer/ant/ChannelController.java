@@ -7,10 +7,9 @@ import com.dsi.ant.channel.AntCommandFailedException;
 import com.dsi.ant.channel.IAntChannelEventHandler;
 import com.dsi.ant.message.ChannelId;
 import com.dsi.ant.message.ChannelType;
-import com.dsi.ant.message.fromant.ChannelEventMessage;
-import com.dsi.ant.message.fromant.ChannelIdMessage;
 import com.dsi.ant.message.fromant.MessageFromAntType;
 import com.dsi.ant.message.ipc.AntMessageParcel;
+import com.gpstransfer.ant.statemachine.dispatcher.StateDispatcher;
 
 public class ChannelController {
 
@@ -20,6 +19,7 @@ public class ChannelController {
     public static final int LINK_PERIOD = 0x24;
 
     private ChannelChangedListener channelListener;
+    StateDispatcher stateDispatcher;
 
     private AntChannel antChannel;
     private ChannelId channelId;
@@ -30,6 +30,7 @@ public class ChannelController {
         channelId = new ChannelId(0, 0, 0, true); // TODO 0,0,0? for pairing???
         this.channelListener = channelListener;
         mIsOpen = openChannel();
+        stateDispatcher = new StateDispatcher(this.antChannel);
     }
 
     private boolean openChannel() {
@@ -87,80 +88,7 @@ public class ChannelController {
         public void onReceiveMessage(MessageFromAntType messageType, AntMessageParcel antParcel) {
             channelListener.onRefreshLog(antParcel.toString());
             log(Log.VERBOSE, antParcel.toString());
-            // Switching on message type to handle different types of messages
-            switch (messageType) {
-                // If data message, construct from parcel and update channel data
-                case BROADCAST_DATA:
-                    break;
-                case ACKNOWLEDGED_DATA:
-                    break;
-                case CHANNEL_EVENT:
-                    // Constructing channel event message from parcel
-                    ChannelEventMessage eventMessage = new ChannelEventMessage(antParcel);
-                    // Switching on event code to handle the different types of channel events
-                    switch (eventMessage.getEventCode()) {
-                        case TX: {
-                            break;
-                        }
-                        case RX_SEARCH_TIMEOUT: {
-                            break;
-                        }
-
-                        case CHANNEL_CLOSED: {
-                            break;
-                        }
-                        case CHANNEL_COLLISION: {
-                            break;
-                        }
-                        case RX_FAIL: {
-                            break;
-                        }
-                        case RX_FAIL_GO_TO_SEARCH: {
-                            break;
-                        }
-                        case TRANSFER_RX_FAILED: {
-                            break;
-                        }
-                        case TRANSFER_TX_COMPLETED: {
-                            break;
-                        }
-                        case TRANSFER_TX_FAILED: {
-                            break;
-                        }
-                        case TRANSFER_TX_START: {
-                            break;
-                        }
-                        case UNKNOWN: {
-                            break;
-                        }
-                    }
-                    break;
-                case ANT_VERSION: {
-                    break;
-                }
-                case BURST_TRANSFER_DATA: {
-                    break;
-                }
-                case CAPABILITIES:
-                    break;
-                case CHANNEL_ID:
-                    channelId = new ChannelIdMessage(antParcel).getChannelId();
-                    log(Log.VERBOSE, channelId.toString());
-                    break;
-                case CHANNEL_RESPONSE:
-                    break;
-                case CHANNEL_STATUS:
-                    break;
-                case SERIAL_NUMBER:
-                    break;
-                case OTHER:
-                    break;
-                default: {
-                    log(Log.VERBOSE, antParcel.toString());
-                    break;
-                }
-
-            }
+            stateDispatcher.dispatch(messageType, antParcel);
         }
     }
 
