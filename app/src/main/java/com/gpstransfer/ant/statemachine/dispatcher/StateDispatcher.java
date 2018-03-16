@@ -5,45 +5,62 @@ import com.dsi.ant.channel.AntChannel;
 import com.dsi.ant.message.fromant.ChannelEventMessage;
 import com.dsi.ant.message.fromant.MessageFromAntType;
 import com.dsi.ant.message.ipc.AntMessageParcel;
+import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.statemachine.Result;
 import com.gpstransfer.ant.statemachine.StateFactory;
-import com.gpstransfer.ant.statemachine.state.State;
+import com.gpstransfer.ant.statemachine.state.*;
+
+import static com.gpstransfer.ant.ChannelController.LINK_PERIOD;
 
 public class StateDispatcher {
 
+    private static final String LOGGER = StateDispatcher.class.getSimpleName();
+
+
+    private final ChannelChangedListener channelListener;
     private AntChannel antChannel;
     private State linkState;
     private State authState;
     private State busyState;
     private State noState;
-    private State burstState;
+    private BurstState burstState;
+    private State fileNameResponseState;
     private State directSendResponseState;
     private State endState;
     private State pairingAuthResponseState;
     private State rxFailedState;
     private State txFailedState;
     private State txSuccessState;
+    private State currentState;
+    private int counter = 0;
 
-    public StateDispatcher(AntChannel antChannel) {
+
+    public StateDispatcher(AntChannel antChannel, ChannelChangedListener channelListener) {
+        this.channelListener = channelListener;
         this.antChannel = antChannel;
-        StateFactory stateFactory = new StateFactory(this.antChannel);
+        StateFactory stateFactory = new StateFactory(this.antChannel, this.channelListener);
         noState = stateFactory.getNoState();
         busyState = stateFactory.getBusyState();
         authState = stateFactory.getAuthState();
         linkState = stateFactory.getLinkState();
         burstState = stateFactory.getBurstState();
+        fileNameResponseState = stateFactory.getFileNameResponseState();
         directSendResponseState = stateFactory.getDirectSendResponseState();
         endState = stateFactory.getEndState();
         pairingAuthResponseState = stateFactory.getPairingAuthResponseState();
         rxFailedState = stateFactory.getRxFailedState();
         txFailedState = stateFactory.getTxFailedState();
         txSuccessState = stateFactory.getTxSuccessState();
+        currentState = noState;
     }
 
 
     public void dispatch(MessageFromAntType messageType, AntMessageParcel antParcel) {
-
+        log(Log.VERBOSE, currentState.getClass().getSimpleName());
+        byte[] data = antParcel.getMessageContent();
         switch (messageType) {
             case BROADCAST_DATA:
+                counter++;
                 dispatchBroadcastData(antParcel);
                 break;
             case ACKNOWLEDGED_DATA:
@@ -66,18 +83,38 @@ public class StateDispatcher {
                         break;
                     }
                     case RX_FAIL: {
+                        rxFailedState.process(data);
                         break;
                     }
                     case RX_FAIL_GO_TO_SEARCH: {
                         break;
                     }
                     case TRANSFER_RX_FAILED: {
+                        if (currentState instanceof BurstState) {
+                            currentState.reset();
+                        }
                         break;
                     }
                     case TRANSFER_TX_COMPLETED: {
+                        txSuccessState.process(data);
                         break;
                     }
                     case TRANSFER_TX_FAILED: {
+                        if (currentState instanceof BurstState) {
+                            try {
+                                Thread.sleep(300);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            burstState.nextDataBlock();
+                        } else {
+                            try {
+                                Thread.sleep(300);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            currentState.nextState();
+                        }
                         break;
                     }
                     case TRANSFER_TX_START: {
@@ -92,7 +129,28 @@ public class StateDispatcher {
                 break;
             }
             case BURST_TRANSFER_DATA: {
-                break;
+                if (currentState instanceof LinkState || currentState instanceof PairingAuthResponseState) {
+                    Result success = pairingAuthResponseState.process(data);
+                    if (success.equals(Result.SUCCESS)) currentState = burstState;
+                    if (success.equals(Result.IN_PROGRESS)) currentState = pairingAuthResponseState;
+                    break;
+                }
+                if (data[1] == 0x43 && data[2] == LINK_PERIOD && data[3] == 0x03) {
+                    busyState.process(data);
+                    break;
+                }
+                if (data[1] == 0x43 && data[2] == LINK_PERIOD && data[3] == 0x02) {
+                    busyState.process(data);
+                    break;
+                }
+
+                if (data[2] == (byte) 0x8D || currentState instanceof DirectSendResponseState) {
+                    directSendResponseState.process(data);
+                    break;
+                }
+                currentState = burstState;
+                burstState.process(data);
+
             }
             case CAPABILITIES:
                 break;
@@ -119,30 +177,42 @@ public class StateDispatcher {
 
 
     private void dispatchBroadcastData(AntMessageParcel antParcel) {
-        switch (antParcel.getMessageContent()[2]) {
-            case 0x00:
-                noState.process(antParcel.getMessageContent());
-                break;
-            case 0x01:
-                linkState.process(antParcel.getMessageContent());
-                break;
-            case 0x02:
-                authState.process(antParcel.getMessageContent());
-                break;
-            case 0x03:
-                busyState.process(antParcel.getMessageContent());
-                break;
-        }
-
+        if (counter > 15)
+            switch (antParcel.getMessageContent()[3]) {
+                case 0x00:
+                    noState.process(antParcel.getMessageContent());
+                    break;
+                case 0x01:
+                    if (currentState instanceof NoState) {
+                        linkState.process(antParcel.getMessageContent());
+                        currentState = linkState;
+                    }
+                    break;
+                case 0x02:
+                    if (currentState instanceof PairingAuthResponseState) {
+                        authState.process(antParcel.getMessageContent());
+                        currentState = authState;
+                    }
+                    break;
+                case 0x03:
+                    busyState.process(antParcel.getMessageContent());
+                    break;
+            }
     }
+
 
     private void log(int loglevel, String logMessage) {
         log(loglevel, logMessage, null);
     }
 
     private void log(int priority, String logMessage, Throwable e) {
-        String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
-        Log.println(priority, LOGGER, logMessage + stacktrace);
-        channelListener.onRefreshLog(logMessage + stacktrace);
+        new Runnable() {
+            @Override
+            public void run() {
+                String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
+                Log.println(priority, LOGGER, logMessage + stacktrace);
+                channelListener.onRefreshLog(logMessage + stacktrace);
+            }
+        }.run();
     }
 }

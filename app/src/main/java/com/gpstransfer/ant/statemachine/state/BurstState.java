@@ -1,67 +1,100 @@
 package com.gpstransfer.ant.statemachine.state;
 
+import android.os.RemoteException;
 import android.util.Log;
 import com.dsi.ant.channel.AntChannel;
+import com.dsi.ant.channel.AntCommandFailedException;
+import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.statemachine.Result;
 
 import java.util.LinkedList;
 
 public class BurstState extends State {
 
-    private int blockCounter;
-    private int blockSize;
-    private int totalSizeByte;
-    private int blockSizeByte;
-    private LinkedList<Byte> dataBytes = new LinkedList<>();
+    protected int blockCounter;
+    protected int blockSize;
+    private boolean hadFileNameReceived;
+    protected int totalSizeByte = -1;
+    protected int blockSizeByte;
+    protected LinkedList<Byte> dataBytes = new LinkedList<>();
+    protected LinkedList<Byte> currentBlockBytes = new LinkedList<>();
+    private int currentBlockCounter;
 
-    public BurstState(AntChannel antChannel) {
-        super(antChannel);
+    public BurstState(AntChannel antChannel, ChannelChangedListener channelListener) {
+        super(antChannel, channelListener);
     }
 
     @Override
-    public void nextState() {
-
+    public boolean nextState() {
+        try {
+            antChannel.close();
+        } catch (RemoteException | AntCommandFailedException e) {
+            return false;
+        }
+        return true;
     }
 
     @Override
-    public void process(byte[] data) {
+    public Result process(byte[] data) {
         previousState = this;
         log(Log.VERBOSE, getClass().getSimpleName());
         blockCounter++;
-        if (blockCounter >= 2) {
-            for (int i = (blockCounter == 2 ? 5 : 1); i < 9; i++) { //copy data without block counter
-                if (data[i] != 0x00) { //
-                    dataBytes.add(data[i]);
-                }
-            }
-        }
-        if (data[2] == 0x0D) {
-            blockSize = (((blockSize & data[8]) << 8) & data[7]) + 1;
-        }
-        if (blockCounter == 2) { //calc total size and block size bytes from second data block
-            totalSizeByte = (totalSizeByte & data[2] << 8) & data[1];
-            blockSizeByte += ((data[3] << 8) & data[4]);
+        currentBlockCounter++;
+        for (int i = 1; i < data.length; i++) {
+            currentBlockBytes.add(data[i]);
         }
 
-        if ((data[0] == 0xA0) && (blockSize == blockCounter)) {
+        if (blockCounter == 2) {
+            totalSizeByte = (data[2] & 0xFF) * 256;
+            totalSizeByte += (data[1] & 0xFF);
+            log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
+
+        }
+
+        if (data[0] == (byte) 0xE0) { //if filename response: reduce total byte size with 1
+            totalSizeByte--;
+            hadFileNameReceived = true;
+        }
+
+        if (dataBytes.size() == totalSizeByte - (blockCounter * 12)) { //only real data without size informations
+            log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
+            log(Log.VERBOSE, "DATA RECEIVED: " + dataBytes.size() + " bytes");
+            nextState();
+            return Result.SUCCESS;
+        }
+
+        if (data[0] == (byte) 0xE0 || data[0] == (byte) 0xA0) {
+            if (data[0] == (byte) 0xA0) {
+                dataBytes.addAll(currentBlockBytes);
+            }
+            currentBlockCounter = 0;
+            currentBlockBytes.clear();
             nextDataBlock();
         }
-        if (dataBytes.size() == (totalSizeByte - 4)) { //only real data without size informations
-            nextState();
-        }
+
+
+        return Result.IN_PROGRESS;
     }
 
+    @Override
     public void reset() {
-        dataBytes.subList()
-        blockCounter = 0;
-        blockSizeByte
+        log(Log.VERBOSE, "Reset... Total received bytes: " + dataBytes.size());
+        currentBlockBytes.clear();
+        blockCounter -= currentBlockCounter; //remove failed bytes and counters
+        currentBlockCounter = 0; //reset actual block counter
     }
 
-    private void nextDataBlock() {
+    public void nextDataBlock() {
         log(Log.VERBOSE, "Continue download request...");
-        blockCounter = 0;
-        byte[] package1 = new byte[]{0x00, 0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00};
-        byte[] package2 = new byte[]{(byte) 0xA0, 0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
+        log(Log.VERBOSE, "DATA RECEIVED: " + dataBytes.size() + " bytes");
+        currentBlockCounter = 0;
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00,
+                0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
         sendBurstData(package1);
-        sendBurstData(package2);
     }
 }

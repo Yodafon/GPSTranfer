@@ -2,21 +2,25 @@ package com.gpstransfer.ant.statemachine.state;
 
 import android.util.Log;
 import com.dsi.ant.channel.AntChannel;
+import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.statemachine.Result;
 
 public class TXFailedState extends State {
 
-    public TXFailedState(AntChannel antChannel) {
-        super(antChannel);
+    public TXFailedState(AntChannel antChannel, ChannelChangedListener channelListener) {
+        super(antChannel, channelListener);
     }
 
     @Override
-    protected void nextState() {
-        previousState.nextState();
+    public boolean nextState() {
+        //previousState.nextState();
+        return true;
     }
 
     @Override
-    public void process(byte[] data) {
+    public Result process(byte[] data) {
         log(Log.VERBOSE, getClass().getSimpleName());
         nextState();
+        return Result.SUCCESS;
     }
 }

@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.dsi.ant.channel.ChannelNotAvailableException;
@@ -46,15 +47,22 @@ public class MainPage extends AppCompatActivity {
         button_closeChannel.setOnClickListener((View v) -> {
             stopReceiving();
         });
+
+
     }
 
     private void stopReceiving() {
         if (null != channelService) {
             channelService.closeAntChannel();
         }
+
     }
 
     private void startReceiving() {
+
+        ScrollView viewById = (ScrollView) findViewById(R.id.scroll_window);
+        TextView childAt = (TextView) viewById.getChildAt(0);
+        childAt.setText("");
         if (null != channelService) {
             try {
                 channelService.startReceiving();
@@ -110,6 +118,13 @@ public class MainPage extends AppCompatActivity {
                         public void run() {
                             TextView viewById = (TextView) findViewById(R.id.log_window);
                             viewById.append(message + "\n");
+                            ScrollView scrollView = (ScrollView) findViewById(R.id.scroll_window);
+                            scrollView.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    scrollView.fullScroll(View.FOCUS_DOWN);
+                                }
+                            });
                         }
                     });
                 }

@@ -1,6 +1,9 @@
 package com.gpstransfer.ant.statemachine.state;
 
+import android.util.Log;
 import com.dsi.ant.channel.AntChannel;
+import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.statemachine.Result;
 
 /*
 *
@@ -8,17 +11,18 @@ import com.dsi.ant.channel.AntChannel;
 *
 * */
 public class DirectSendResponseState extends State {
-    public DirectSendResponseState(AntChannel antChannel) {
-        super(antChannel);
+    public DirectSendResponseState(AntChannel antChannel, ChannelChangedListener channelListener) {
+        super(antChannel, channelListener);
     }
 
     @Override
-    public void nextState() {
-
+    public boolean nextState() {
+        return true;
     }
 
     @Override
-    public void process(byte[] data) {
-
+    public Result process(byte[] data) {
+        log(Log.VERBOSE, getClass().getSimpleName());
+        return Result.IN_PROGRESS;
     }
 }

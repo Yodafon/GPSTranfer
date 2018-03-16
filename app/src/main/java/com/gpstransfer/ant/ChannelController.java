@@ -15,7 +15,7 @@ public class ChannelController {
 
     private static final String LOGGER = ChannelController.class.getSimpleName();
     private static final int FREQUENCY = 50;
-    private static final int PERIOD = 4096; //8hz
+    public static final int PERIOD = 4096; //8hz
     public static final int LINK_PERIOD = 0x24;
 
     private ChannelChangedListener channelListener;
@@ -27,10 +27,10 @@ public class ChannelController {
 
     public ChannelController(AntChannel antChannel, boolean isMaster, ChannelChangedListener channelListener) {
         this.antChannel = antChannel;
-        channelId = new ChannelId(0, 0, 0, true); // TODO 0,0,0? for pairing???
+        channelId = new ChannelId(0, 0, 0, false); // TODO 0,0,0? for pairing???
         this.channelListener = channelListener;
         mIsOpen = openChannel();
-        stateDispatcher = new StateDispatcher(this.antChannel);
+        stateDispatcher = new StateDispatcher(this.antChannel, this.channelListener);
     }
 
     private boolean openChannel() {
@@ -67,9 +67,14 @@ public class ChannelController {
     }
 
     private void log(int priority, String logMessage, Throwable e) {
-        String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
-        Log.println(priority, LOGGER, logMessage + stacktrace);
-        channelListener.onRefreshLog(logMessage + stacktrace);
+        new Runnable() {
+            @Override
+            public void run() {
+                String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
+                Log.println(priority, LOGGER, logMessage + stacktrace);
+                channelListener.onRefreshLog(logMessage + stacktrace);
+            }
+        }.run();
     }
 
     private void sendChannelIdRequest() throws AntCommandFailedException, RemoteException {
@@ -86,9 +91,10 @@ public class ChannelController {
 
         @Override
         public void onReceiveMessage(MessageFromAntType messageType, AntMessageParcel antParcel) {
-            channelListener.onRefreshLog(antParcel.toString());
             log(Log.VERBOSE, antParcel.toString());
-            stateDispatcher.dispatch(messageType, antParcel);
+            if (stateDispatcher != null) {
+                stateDispatcher.dispatch(messageType, antParcel);
+            }
         }
     }
 

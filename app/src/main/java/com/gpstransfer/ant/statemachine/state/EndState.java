@@ -3,25 +3,27 @@ package com.gpstransfer.ant.statemachine.state;
 import android.os.RemoteException;
 import com.dsi.ant.channel.AntChannel;
 import com.dsi.ant.channel.AntCommandFailedException;
+import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.statemachine.Result;
 
 public class EndState extends State {
-    public EndState(AntChannel antChannel) {
-        super(antChannel);
+    public EndState(AntChannel antChannel, ChannelChangedListener channelListener) {
+        super(antChannel, channelListener);
     }
 
     @Override
-    protected void nextState() {
+    public boolean nextState() {
         //no next state
+        return true;
     }
 
     @Override
-    public void process(byte[] data) {
+    public Result process(byte[] data) {
         try {
             antChannel.close();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (AntCommandFailedException e) {
-            e.printStackTrace();
+        } catch (RemoteException | AntCommandFailedException e) {
+            return Result.IN_PROGRESS;
         }
+        return Result.SUCCESS;
     }
 }
