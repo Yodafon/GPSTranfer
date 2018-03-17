@@ -44,10 +44,8 @@ public class StateDispatcher {
         authState = stateFactory.getAuthState();
         linkState = stateFactory.getLinkState();
         burstState = stateFactory.getBurstState();
-        fileNameResponseState = stateFactory.getFileNameResponseState();
         directSendResponseState = stateFactory.getDirectSendResponseState();
         endState = stateFactory.getEndState();
-        pairingAuthResponseState = stateFactory.getPairingAuthResponseState();
         rxFailedState = stateFactory.getRxFailedState();
         txFailedState = stateFactory.getTxFailedState();
         txSuccessState = stateFactory.getTxSuccessState();
@@ -129,12 +127,6 @@ public class StateDispatcher {
                 break;
             }
             case BURST_TRANSFER_DATA: {
-                if (currentState instanceof LinkState || currentState instanceof PairingAuthResponseState) {
-                    Result success = pairingAuthResponseState.process(data);
-                    if (success.equals(Result.SUCCESS)) currentState = burstState;
-                    if (success.equals(Result.IN_PROGRESS)) currentState = pairingAuthResponseState;
-                    break;
-                }
                 if (data[1] == 0x43 && data[2] == LINK_PERIOD && data[3] == 0x03) {
                     busyState.process(data);
                     break;
@@ -149,7 +141,10 @@ public class StateDispatcher {
                     break;
                 }
                 currentState = burstState;
-                burstState.process(data);
+                Result process = burstState.process(data);
+                if (Result.SUCCESS.equals(process)) {
+                    burstState.nextState();
+                }
 
             }
             case CAPABILITIES:
@@ -189,7 +184,7 @@ public class StateDispatcher {
                     }
                     break;
                 case 0x02:
-                    if (currentState instanceof PairingAuthResponseState) {
+                    if (currentState instanceof LinkState) {
                         authState.process(antParcel.getMessageContent());
                         currentState = authState;
                     }

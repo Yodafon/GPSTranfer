@@ -43,9 +43,6 @@ public class StateFactory {
         return new EndState(this.antChannel, channelListener);
     }
 
-    public State getPairingAuthResponseState() {
-        return new PairingAuthResponseState(this.antChannel, channelListener);
-    }
 
     public State getRxFailedState() {
         return new RXFailedState(this.antChannel, channelListener);
@@ -59,7 +56,4 @@ public class StateFactory {
         return new TXSuccessState(this.antChannel, channelListener);
     }
 
-    public State getFileNameResponseState() {
-        return new FileNameResponseState(this.antChannel, channelListener);
-    }
 }

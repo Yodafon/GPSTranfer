@@ -15,7 +15,7 @@ public class AuthState extends State {
 
     @Override
     public boolean nextState() {
-        log(Log.VERBOSE, "Sending filename request...");
+        log(Log.VERBOSE, "Sending download request...");
         byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00,
                 0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
         return sendBurstData(package1);
@@ -25,11 +25,6 @@ public class AuthState extends State {
     public Result process(byte[] data) {
         previousState = this;
         log(Log.VERBOSE, getClass().getSimpleName());
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         nextState();
         return Result.SUCCESS;
     }

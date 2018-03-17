@@ -19,6 +19,7 @@ public class BurstState extends State {
     protected LinkedList<Byte> dataBytes = new LinkedList<>();
     protected LinkedList<Byte> currentBlockBytes = new LinkedList<>();
     private int currentBlockCounter;
+    private int responseCounter = 0;
 
     public BurstState(AntChannel antChannel, ChannelChangedListener channelListener) {
         super(antChannel, channelListener);
@@ -27,7 +28,10 @@ public class BurstState extends State {
     @Override
     public boolean nextState() {
         try {
+            log(Log.VERBOSE, "Download success. Channel closing...");
             antChannel.close();
+
+            log(Log.VERBOSE, "Channel closed");
         } catch (RemoteException | AntCommandFailedException e) {
             return false;
         }
@@ -52,24 +56,26 @@ public class BurstState extends State {
         }
 
         if (data[0] == (byte) 0xE0) { //if filename response: reduce total byte size with 1
-            totalSizeByte--;
+            totalSizeByte++;
+            responseCounter--; //doesnt count the filename response
             hadFileNameReceived = true;
         }
 
-        if (dataBytes.size() == totalSizeByte - (blockCounter * 12)) { //only real data without size informations
-            log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
-            log(Log.VERBOSE, "DATA RECEIVED: " + dataBytes.size() + " bytes");
-            nextState();
-            return Result.SUCCESS;
-        }
 
         if (data[0] == (byte) 0xE0 || data[0] == (byte) 0xA0) {
             if (data[0] == (byte) 0xA0) {
                 dataBytes.addAll(currentBlockBytes);
             }
+            responseCounter++;
             currentBlockCounter = 0;
             currentBlockBytes.clear();
+
             nextDataBlock();
+            if (dataBytes.size() == totalSizeByte + (responseCounter * 12)) { //only real data without size informations
+                log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
+                log(Log.VERBOSE, "DATA RECEIVED: " + dataBytes.size() + " bytes");
+                return Result.SUCCESS;
+            }
         }
 
 
