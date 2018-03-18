@@ -14,14 +14,13 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class BurstState extends State {
 
     protected int blockCounter;
     protected int blockSize;
     private boolean hadFileNameReceived;
-    protected int totalSizeByte = -1;
+    protected int totalSizeByte = 0;
     protected int blockSizeByte;
     protected LinkedList<Byte> dataBytes = new LinkedList<>();
     protected LinkedList<Byte> currentBlockBytes = new LinkedList<>();
@@ -107,33 +106,36 @@ public class BurstState extends State {
             currentBlockBytes.add(data[i]);
         }
 
-        if (blockCounter == 2) {  //utolso ket bajtot kell nezmi ami a tenlyeges adat meretet jeloli sor vegi 0-k nelkul es header nelkul
-            totalSizeByte = (data[2] & 0xFF) * 256;
-            totalSizeByte += (data[1] & 0xFF);
-            log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
-
-        }
-
-        if (data[0] == (byte) 0xE0) { //if filename response: reduce total byte size with 1
-            totalSizeByte++;
-            responseCounter--; //doesnt count the filename response
-            hadFileNameReceived = true;
-            extractFileName(currentBlockBytes);
-        }
-
-
         //A0: ha az elozo block 60-al jött
         //E0: ha az elozo block 40-el jott
         //C0: ha az elozo block 20-el jott
 
         if (data[0] == (byte) 0xE0 || data[0] == (byte) 0xA0 || data[0] == (byte) 0xC0) {//remove the tailing 0x00
-            dataBytes.addAll(currentBlockBytes.stream().filter(item -> !item.equals((byte) 0x00)).collect(Collectors.toList()));
+            if (currentBlockBytes.get(8) == (byte) 0xDF && currentBlockBytes.get(9) == 0x05) { //filename response
+                totalSizeByte = (currentBlockBytes.get(13) & 0xFF) * 256;
+                totalSizeByte += (currentBlockBytes.get(12) & 0xFF);
+                log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
+                extractFileName(currentBlockBytes);
+                hadFileNameReceived = true;
+            } else { //don't copy filename data only real data
+                if (hadFileNameReceived == false) {
+                    int sizeByte = ((currentBlockBytes.get(11) & 0xFF) * 256);
+                    totalSizeByte += (sizeByte + (currentBlockBytes.get(10) & 0xFF));
+                    log(Log.VERBOSE, "Sum size in bytes: " + totalSizeByte);
+                }
+                //copy whole data without tailing 0s and header
+                for (int i = 12; i < currentBlockBytes.size(); i++) {
+                    if (currentBlockBytes.get(i) != 0x00) {
+                        dataBytes.add(currentBlockBytes.get(i));
+                    }
+                }
+            }
             responseCounter++;
             currentBlockCounter = 0;
             currentBlockBytes.clear();
 
             nextDataBlock();
-            if (dataBytes.size() == totalSizeByte + (responseCounter * 12)) { //only real data without size informations
+            if (dataBytes.size() == totalSizeByte) { //only real data without size informations
                 log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
                 log(Log.VERBOSE, "DATA RECEIVED: " + dataBytes.size() + " bytes");
                 return Result.SUCCESS;
