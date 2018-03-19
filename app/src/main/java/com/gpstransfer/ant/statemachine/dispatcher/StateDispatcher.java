@@ -99,18 +99,10 @@ public class StateDispatcher {
                     }
                     case TRANSFER_TX_FAILED: {
                         if (currentState instanceof BurstState) {
-                            try {
-                                Thread.sleep(300);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
+
                             burstState.nextDataBlock();
                         } else {
-                            try {
-                                Thread.sleep(300);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
+
                             currentState.nextState();
                         }
                         break;
@@ -136,7 +128,7 @@ public class StateDispatcher {
                     break;
                 }
 
-                if (data[2] == (byte) 0x8D || currentState instanceof DirectSendResponseState) {
+                if ((data[1] == (byte) 0x44 && data[2] == (byte) 0x8D) || currentState instanceof DirectSendResponseState) {
                     directSendResponseState.process(data);
                     break;
                 }

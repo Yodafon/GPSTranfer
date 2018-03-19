@@ -21,6 +21,11 @@ public class BusyState extends State {
     @Override
     public Result process(byte[] data) {
         log(Log.VERBOSE, getClass().getSimpleName());
+//        try {
+//            Thread.sleep(300);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
         nextState();
         return Result.SUCCESS;
     }

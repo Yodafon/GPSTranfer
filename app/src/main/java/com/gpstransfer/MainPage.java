@@ -9,10 +9,7 @@ import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ScrollView;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 import com.dsi.ant.channel.ChannelNotAvailableException;
 import com.dsi.ant.channel.UnsupportedFeatureException;
 import com.gpstransfer.ant.ChannelChangedListener;
@@ -63,6 +60,8 @@ public class MainPage extends AppCompatActivity {
         ScrollView viewById = (ScrollView) findViewById(R.id.scroll_window);
         TextView childAt = (TextView) viewById.getChildAt(0);
         childAt.setText("");
+        ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        progressBar.setProgress(0);
         if (null != channelService) {
             try {
                 channelService.startReceiving();
@@ -133,8 +132,15 @@ public class MainPage extends AppCompatActivity {
                 // Updates the UI to allow/disallow acquiring new channels
                 @Override
                 public void onRefreshProgressBar(int percent) {
-                    // Enable Add Channel button and Master/Slave toggle if
-                    // adding channels is allowed
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
+                            progressBar.setMax(100);
+                            progressBar.setProgress(percent, true);
+                        }
+                    });
+
                 }
             });
         }

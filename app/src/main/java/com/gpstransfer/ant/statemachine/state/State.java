@@ -45,11 +45,10 @@ public abstract class State {
         //  while(true) {
             try {
                 log(Log.VERBOSE, bytesToHex(data));
-                Thread.sleep((long) ((PERIOD / 32768f) * 1000));
                 antChannel.burstTransfer(data);
-                Thread.sleep((long) ((PERIOD / 32768f) * 1000));
+                //Thread.sleep((long) ((PERIOD / 32768f) * 1000));
                 return true;
-            } catch (RemoteException | AntCommandFailedException | InterruptedException e) {
+            } catch (RemoteException | AntCommandFailedException e) {
                 log(Log.ERROR, "Retry burst sending....", e);
             }
         return true;
@@ -72,6 +71,15 @@ public abstract class State {
                 String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
                 Log.println(priority, LOGGER, logMessage + stacktrace);
                 channelListener.onRefreshLog(logMessage + stacktrace);
+            }
+        }.run();
+    }
+
+    protected void updateProgressBar(int value) {
+        new Runnable() {
+            @Override
+            public void run() {
+                channelListener.onRefreshProgressBar(value);
             }
         }.run();
     }
