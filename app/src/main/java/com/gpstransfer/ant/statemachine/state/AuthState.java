@@ -7,6 +7,8 @@ import com.gpstransfer.ant.statemachine.Result;
 
 public class AuthState extends State {
 
+    static byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00,
+            0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     public AuthState(AntChannel antChannel, ChannelChangedListener channelListener) {
         super(antChannel, channelListener);
@@ -16,8 +18,6 @@ public class AuthState extends State {
     @Override
     public boolean nextState() {
         log(Log.VERBOSE, "Sending download request...");
-        byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00,
-                0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
         return sendBurstData(package1);
     }
 

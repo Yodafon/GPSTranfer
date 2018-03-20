@@ -6,6 +6,7 @@ import com.dsi.ant.message.fromant.ChannelEventMessage;
 import com.dsi.ant.message.fromant.MessageFromAntType;
 import com.dsi.ant.message.ipc.AntMessageParcel;
 import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.Logger;
 import com.gpstransfer.ant.statemachine.Result;
 import com.gpstransfer.ant.statemachine.StateFactory;
 import com.gpstransfer.ant.statemachine.state.*;
@@ -54,7 +55,7 @@ public class StateDispatcher {
 
 
     public void dispatch(MessageFromAntType messageType, AntMessageParcel antParcel) {
-        log(Log.VERBOSE, currentState.getClass().getSimpleName());
+        //log(Log.VERBOSE, currentState.getClass().getSimpleName());
         byte[] data = antParcel.getMessageContent();
         switch (messageType) {
             case BROADCAST_DATA:
@@ -99,7 +100,6 @@ public class StateDispatcher {
                     }
                     case TRANSFER_TX_FAILED: {
                         if (currentState instanceof BurstState) {
-
                             burstState.nextDataBlock();
                         } else {
 
@@ -192,14 +192,7 @@ public class StateDispatcher {
         log(loglevel, logMessage, null);
     }
 
-    private void log(int priority, String logMessage, Throwable e) {
-        new Runnable() {
-            @Override
-            public void run() {
-                String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
-                Log.println(priority, LOGGER, logMessage + stacktrace);
-                channelListener.onRefreshLog(logMessage + stacktrace);
-            }
-        }.run();
+    public void log(int priority, String logMessage, Throwable e) {
+        Logger.log(priority, logMessage, e, channelListener);
     }
 }

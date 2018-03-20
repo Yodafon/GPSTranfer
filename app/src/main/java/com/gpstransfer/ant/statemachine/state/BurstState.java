@@ -22,15 +22,14 @@ import java.util.List;
 
 public class BurstState extends State {
 
-    protected int blockSize;
     private boolean hadFileNameReceived;
     protected int totalSizeByte = 0;
-    protected int blockSizeByte;
     protected LinkedList<Data> dataBytes = new LinkedList<>();
     protected LinkedList<Byte> currentBlockBytes = new LinkedList<>();
-    private int responseCounter = 0;
     private String filename;
     int totalSizeOfList;
+    static byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 
     public BurstState(AntChannel antChannel, ChannelChangedListener channelListener) {
         super(antChannel, channelListener);
@@ -186,9 +185,6 @@ public class BurstState extends State {
             log(Log.VERBOSE, "Progress value: " + value + " percent");
             updateProgressBar(value);
         }
-
-        byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00,
-                0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
         sendBurstData(package1);
     }
 }

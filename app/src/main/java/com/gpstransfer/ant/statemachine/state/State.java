@@ -5,6 +5,7 @@ import android.util.Log;
 import com.dsi.ant.channel.AntChannel;
 import com.dsi.ant.channel.AntCommandFailedException;
 import com.gpstransfer.ant.ChannelChangedListener;
+import com.gpstransfer.ant.Logger;
 import com.gpstransfer.ant.statemachine.Result;
 
 import static com.gpstransfer.ant.ChannelController.PERIOD;
@@ -42,17 +43,17 @@ public abstract class State {
     }
 
     protected boolean sendBurstData(byte[] data) {
-        //  while(true) {
             try {
+                Thread.sleep(125);
                 log(Log.VERBOSE, bytesToHex(data));
                 antChannel.burstTransfer(data);
-                //Thread.sleep((long) ((PERIOD / 32768f) * 1000));
-                return true;
             } catch (RemoteException | AntCommandFailedException e) {
                 log(Log.ERROR, "Retry burst sending....", e);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         return true;
-        //}
+
     }
 
 
@@ -65,23 +66,11 @@ public abstract class State {
     }
 
     protected void log(int priority, String logMessage, Throwable e) {
-        new Runnable() {
-            @Override
-            public void run() {
-                String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
-                Log.println(priority, LOGGER, logMessage + stacktrace);
-                channelListener.onRefreshLog(logMessage + stacktrace);
-            }
-        }.run();
+        Logger.log(priority, logMessage, e, channelListener);
     }
 
     protected void updateProgressBar(int value) {
-        new Runnable() {
-            @Override
-            public void run() {
                 channelListener.onRefreshProgressBar(value);
-            }
-        }.run();
     }
 
     public void reset() {
