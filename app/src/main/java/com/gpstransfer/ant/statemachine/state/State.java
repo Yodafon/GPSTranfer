@@ -8,8 +8,6 @@ import com.gpstransfer.ant.ChannelChangedListener;
 import com.gpstransfer.ant.Logger;
 import com.gpstransfer.ant.statemachine.Result;
 
-import static com.gpstransfer.ant.ChannelController.PERIOD;
-
 public abstract class State {
 
     private static String LOGGER;
@@ -32,9 +30,8 @@ public abstract class State {
 
     protected boolean sendAckData(byte[] data) {
             try {
-                Thread.sleep((long) ((PERIOD / 32768f) * 1000));
+                Thread.sleep(125);
                 antChannel.startSendAcknowledgedData(data);
-                Thread.sleep((long) ((PERIOD / 32768f) * 1000));
                 log(Log.VERBOSE, bytesToHex(data));
             } catch (RemoteException | AntCommandFailedException | InterruptedException e) {
                 log(Log.ERROR, "Retry ack sending....", e);
@@ -47,12 +44,14 @@ public abstract class State {
                 Thread.sleep(125);
                 log(Log.VERBOSE, bytesToHex(data));
                 antChannel.burstTransfer(data);
+                return true;
             } catch (RemoteException | AntCommandFailedException e) {
+                //e.printStackTrace();
                 log(Log.ERROR, "Retry burst sending....", e);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        return true;
+        return false;
 
     }
 

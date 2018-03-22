@@ -29,6 +29,7 @@ public class BurstState extends State {
     private String filename;
     int totalSizeOfList;
     static byte[] package1 = new byte[]{0x44, 0x0D, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
+    private Result innerState;
 
 
     public BurstState(AntChannel antChannel, ChannelChangedListener channelListener) {
@@ -158,8 +159,8 @@ public class BurstState extends State {
             }
             currentBlockBytes.clear();
 
-            nextDataBlock();
             if (totalSizeOfList == totalSizeByte) { //only real data without size informations
+                while (!nextDataBlock()) ;
                 log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
                 log(Log.VERBOSE, "DATA RECEIVED: " + totalSizeOfList + " bytes");
                 return Result.SUCCESS;
@@ -177,7 +178,8 @@ public class BurstState extends State {
         currentBlockBytes.clear();
     }
 
-    public void nextDataBlock() {
+    public boolean nextDataBlock() {
+        this.innerState = Result.IN_PROGRESS;
         log(Log.VERBOSE, "Continue download request...");
         log(Log.VERBOSE, "DATA RECEIVED: " + totalSizeOfList + " bytes");
         if (hadFileNameReceived == true) {
@@ -185,6 +187,14 @@ public class BurstState extends State {
             log(Log.VERBOSE, "Progress value: " + value + " percent");
             updateProgressBar(value);
         }
-        sendBurstData(package1);
+        return sendBurstData(package1);
+    }
+
+    public Result getInnerState() {
+        return innerState;
+    }
+
+    public void setInnerState(Result innerState) {
+        this.innerState = innerState;
     }
 }

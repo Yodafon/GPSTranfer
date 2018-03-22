@@ -96,11 +96,13 @@ public class StateDispatcher {
                     }
                     case TRANSFER_TX_COMPLETED: {
                         txSuccessState.process(data);
+                        burstState.setInnerState(Result.SUCCESS);
                         break;
                     }
                     case TRANSFER_TX_FAILED: {
                         if (currentState instanceof BurstState) {
-                            burstState.nextDataBlock();
+                            //           burstState.nextDataBlock();
+                            burstState.setInnerState(Result.SUCCESS);
                         } else {
 
                             currentState.nextState();
@@ -179,6 +181,9 @@ public class StateDispatcher {
                     if (currentState instanceof LinkState) {
                         authState.process(antParcel.getMessageContent());
                         currentState = authState;
+                    }
+                    if (currentState instanceof BurstState && burstState.getInnerState().equals(Result.SUCCESS)) {
+                        burstState.nextDataBlock();
                     }
                     break;
                 case 0x03:
