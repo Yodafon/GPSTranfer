@@ -52,10 +52,11 @@ public class BurstState extends State {
 
     private void writeFile() {
         log(Log.VERBOSE, "File writing...");
-        if (!hadFileNameReceived) {
+        if (filename == null || "".equals(filename) || !hadFileNameReceived) {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
             filename = "Waypoint_" + simpleDateFormat.format(new Date());
         }
+        ;
         File logFile = new File("/sdcard/" + filename + ".gpx");
         if (logFile.exists()) {
             logFile.delete();
@@ -78,7 +79,7 @@ public class BurstState extends State {
             for (Data dataByte : dataBytes) {
                 List<Byte> data = dataByte.getData();
                 for (int i = 0; i < data.size(); i++) {
-                    if (data.get(i) == (byte) 0x44 && data.get(i + 1) == (byte) 0x0D) {
+                    if (data.get(i) == (byte) 0x44 && (data.get(i + 1) == (byte) 0x0D || data.get(i + 1) == (byte) 0x8D)) {
                     i = i + 11;
                 } else {
                         if (data.get(i) != 0x00)
@@ -130,9 +131,9 @@ public class BurstState extends State {
                 return Result.IN_PROGRESS;
             }
             if (currentBlockBytes.get(8) == (byte) 0xDF && currentBlockBytes.get(9) == 0x05) { //filename response
-                totalSizeByte = (currentBlockBytes.get(15) & 0xFF) * 16777216;
-                totalSizeByte += (currentBlockBytes.get(14) & 0xFF) * 65536;
-                totalSizeByte += (currentBlockBytes.get(13) & 0xFF) * 256;
+                totalSizeByte = (currentBlockBytes.get(15) & 0xFF) << 24;
+                totalSizeByte += (currentBlockBytes.get(14) & 0xFF) << 16;
+                totalSizeByte += (currentBlockBytes.get(13) & 0xFF) << 8;
                 totalSizeByte += (currentBlockBytes.get(12) & 0xFF);
                 log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
                 extractFileName(currentBlockBytes);

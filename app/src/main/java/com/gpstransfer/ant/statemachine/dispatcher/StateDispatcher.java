@@ -130,7 +130,7 @@ public class StateDispatcher {
                     break;
                 }
 
-                if ((data[1] == (byte) 0x44 && data[2] == (byte) 0x8D) || currentState instanceof DirectSendResponseState) {
+                if (((data[1] == (byte) 0x44 && data[2] == (byte) 0x8D) && data[3] == (byte) 0xFF && data[4] == (byte) 0xFF && data[5] == (byte) 0xFF && data[6] == (byte) 0xFF && data[7] == (byte) 0xFF) || currentState instanceof DirectSendResponseState) {
                     directSendResponseState.process(data);
                     break;
                 }
