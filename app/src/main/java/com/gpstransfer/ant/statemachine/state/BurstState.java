@@ -39,9 +39,9 @@ public class BurstState extends State {
     @Override
     public boolean nextState() {
         try {
-            log(Log.VERBOSE, "Download success. Channel closing...");
+            log(Log.INFO, "Download success. Channel closing...");
             antChannel.close();
-            log(Log.VERBOSE, "Channel closed");
+            log(Log.INFO, "Channel closed");
         } catch (RemoteException | AntCommandFailedException e) {
             return false;
         } finally {
@@ -51,7 +51,7 @@ public class BurstState extends State {
     }
 
     private void writeFile() {
-        log(Log.VERBOSE, "File writing...");
+        log(Log.INFO, "File writing...");
         if (filename == null || "".equals(filename) || !hadFileNameReceived) {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
             filename = "Waypoint_" + simpleDateFormat.format(new Date());
@@ -90,14 +90,14 @@ public class BurstState extends State {
 
             FileInputStream fileInputStream = new FileInputStream(logFile);
             if (XMLChecker.checkXml(fileInputStream)) {
-                log(Log.VERBOSE, "XML is correct");
+                log(Log.INFO, "XML is correct");
             } else {
-                log(Log.VERBOSE, "XML is incorrect");
+                log(Log.INFO, "XML is incorrect");
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        log(Log.VERBOSE, "File saved: " + filename + ".gpx");
+        log(Log.INFO, "File saved: " + filename + ".gpx");
 
     }
 
@@ -135,7 +135,7 @@ public class BurstState extends State {
                 totalSizeByte += (currentBlockBytes.get(14) & 0xFF) << 16;
                 totalSizeByte += (currentBlockBytes.get(13) & 0xFF) << 8;
                 totalSizeByte += (currentBlockBytes.get(12) & 0xFF);
-                log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
+                log(Log.INFO, "Total size in bytes: " + totalSizeByte);
                 extractFileName(currentBlockBytes);
                 hadFileNameReceived = true;
             } else { //don't copy filename data only real data
@@ -162,8 +162,8 @@ public class BurstState extends State {
 
             if (totalSizeOfList == totalSizeByte) { //only real data without size informations
                 while (!nextDataBlock()) ;
-                log(Log.VERBOSE, "Total size in bytes: " + totalSizeByte);
-                log(Log.VERBOSE, "DATA RECEIVED: " + totalSizeOfList + " bytes");
+                log(Log.INFO, "Total size in bytes: " + totalSizeByte);
+                log(Log.INFO, "DATA RECEIVED: " + totalSizeOfList + " bytes");
                 return Result.SUCCESS;
             }
         }

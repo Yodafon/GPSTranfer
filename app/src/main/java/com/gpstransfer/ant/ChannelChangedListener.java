@@ -6,9 +6,10 @@ public interface ChannelChangedListener {
      * channel, channel has transmitted or received data, or if channel has
      * been closed.
      *
+     * @param priority
      * @param message The channel incoming/outcoming message
      */
-    void onRefreshLog(String message);
+    void onRefreshLog(int priority, String message);
 
     void onRefreshProgressBar(int percent);
 

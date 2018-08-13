@@ -98,7 +98,7 @@ public class ChannelController {
             antChannel.release();
 
             Log.d(LOGGER, "Channel Closed");
-            channelListener.onRefreshLog("Channel Closed");
+            channelListener.onRefreshLog(Log.INFO, "Channel Closed");
         }
     }
 

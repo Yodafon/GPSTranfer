@@ -20,7 +20,7 @@ public class MainPage extends AppCompatActivity {
     private boolean mChannelServiceBound = false;
 
     private static final String LOGGER = MainPage.class.getSimpleName();
-
+    private boolean isDebugEnabled = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +51,7 @@ public class MainPage extends AppCompatActivity {
     private void stopReceiving() {
         if (null != channelService) {
             channelService.closeAntChannel();
+            ((Switch) findViewById(R.id.debug_switch)).setEnabled(true);
         }
 
     }
@@ -59,6 +60,9 @@ public class MainPage extends AppCompatActivity {
 
         ScrollView viewById = (ScrollView) findViewById(R.id.scroll_window);
         TextView childAt = (TextView) viewById.getChildAt(0);
+        isDebugEnabled = ((Switch) findViewById(R.id.debug_switch)).isChecked();
+        ((Switch) findViewById(R.id.debug_switch)).setEnabled(false);
+
         childAt.setText("");
         ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
         progressBar.setProgress(0);
@@ -110,22 +114,14 @@ public class MainPage extends AppCompatActivity {
             channelService.setOnChannelChangedListener(new ChannelChangedListener() {
                 // Occurs when a channel has new info/data
                 @Override
-                public void onRefreshLog(final String message) {
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            TextView viewById = (TextView) findViewById(R.id.log_window);
-                            viewById.append(message + "\n");
-                            ScrollView scrollView = (ScrollView) findViewById(R.id.scroll_window);
-                            scrollView.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    scrollView.fullScroll(View.FOCUS_DOWN);
-                                }
-                            });
+                public void onRefreshLog(int priority, final String message) {
+                    if (isDebugEnabled == false) {
+                        if (Log.INFO == priority) {
+                            log(message);
                         }
-                    });
+                    } else {
+                        log(message);
+                    }
                 }
 
 
@@ -155,6 +151,23 @@ public class MainPage extends AppCompatActivity {
             ((Button) findViewById(R.id.button_stop)).setEnabled(false);
         }
     };
+
+    private void log(String message) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                TextView viewById = (TextView) findViewById(R.id.log_window);
+                viewById.append(message + "\n");
+                ScrollView scrollView = (ScrollView) findViewById(R.id.scroll_window);
+                scrollView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        scrollView.fullScroll(View.FOCUS_DOWN);
+                    }
+                });
+            }
+        });
+    }
 
 
 }

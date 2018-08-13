@@ -11,7 +11,7 @@ public class Logger {
 
         String stacktrace = e != null ? "\n" + Log.getStackTraceString(e) : "";
         Log.println(priority, LOGGER, logMessage + stacktrace);
-        channelListener.onRefreshLog(logMessage + stacktrace);
+        channelListener.onRefreshLog(priority, logMessage + stacktrace);
 
     }
 }
